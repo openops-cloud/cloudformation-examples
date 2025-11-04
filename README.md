@@ -10,11 +10,11 @@ Each example is contained in its own folder with:
 
 ## Examples
 
-### S3 Bucket with Standard Tiering
+### S3 Bucket with Standard Configuration
 
 Location: `s3-bucket-standard-tiering/`
 
-Creates an S3 bucket configured with Intelligent-Tiering storage class for automatic cost optimization.
+Creates an S3 bucket with standard configuration and security best practices.
 
 ## Usage
 

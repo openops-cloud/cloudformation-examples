@@ -1,12 +1,9 @@
-# S3 Bucket with Intelligent-Tiering
+# S3 Bucket with Standard Configuration
 
-This CloudFormation template creates an Amazon S3 bucket configured with Intelligent-Tiering storage class for automatic cost optimization.
+This CloudFormation template creates an Amazon S3 bucket with standard configuration and security best practices.
 
 ## Features
 
-- **Intelligent-Tiering**: Automatically moves objects between access tiers based on usage patterns
-  - Archive Access Tier after 90 days of no access
-  - Deep Archive Access Tier after 180 days of no access
 - **Versioning**: Enabled for data protection
 - **Encryption**: Server-side encryption with AES-256
 - **Public Access Block**: All public access is blocked by default
@@ -56,9 +53,4 @@ aws cloudformation delete-stack \
   --region us-east-1
 ```
 
-## Cost Optimization
 
-Intelligent-Tiering automatically optimizes storage costs by:
-- Moving infrequently accessed objects to lower-cost tiers
-- No retrieval fees when accessing objects
-- Small monthly monitoring and automation fee per object

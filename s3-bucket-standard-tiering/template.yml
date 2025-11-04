@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'S3 Bucket with Intelligent-Tiering storage class for automatic cost optimization'
+Description: 'S3 Bucket with standard configuration'
 
 Parameters:
   BucketName:
@@ -15,14 +15,6 @@ Resources:
     Type: 'AWS::S3::Bucket'
     Properties:
       BucketName: !If [HasBucketName, !Ref BucketName, !Ref 'AWS::NoValue']
-      IntelligentTieringConfigurations:
-        - Id: StandardTieringConfig
-          Status: Enabled
-          Tierings:
-            - Days: 90
-              AccessTier: ARCHIVE_ACCESS
-            - Days: 180
-              AccessTier: DEEP_ARCHIVE_ACCESS
       VersioningConfiguration:
         Status: Enabled
       BucketEncryption:
