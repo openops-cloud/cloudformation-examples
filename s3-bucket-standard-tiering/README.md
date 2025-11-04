@@ -7,6 +7,9 @@ This CloudFormation template creates an Amazon S3 bucket with standard configura
 - **Versioning**: Enabled for data protection
 - **Encryption**: Server-side encryption with AES-256
 - **Public Access Block**: All public access is blocked by default
+- **Intelligent-Access Tiering**: Automatically moves objects between access tiers to optimize storage costs
+  - Archive Access tier after 90 days of no access
+  - Deep Archive Access tier after 180 days of no access
 - **Tagging**: Pre-configured tags for management
 
 ## Parameters

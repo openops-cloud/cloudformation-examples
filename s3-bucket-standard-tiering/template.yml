@@ -26,6 +26,14 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+      IntelligentTieringConfigurations:
+        - Id: EntireBucketIntelligentTiering
+          Status: Enabled
+          Tierings:
+            - AccessTier: ARCHIVE_ACCESS
+              Days: 90
+            - AccessTier: DEEP_ARCHIVE_ACCESS
+              Days: 180
       Tags:
         - Key: ManagedBy
           Value: CloudFormation
@@ -38,7 +46,7 @@ Outputs:
     Value: !Ref S3Bucket
     Export:
       Name: !Sub '${AWS::StackName}-BucketName'
-  
+
   BucketArn:
     Description: 'ARN of the created S3 bucket'
     Value: !GetAtt S3Bucket.Arn
