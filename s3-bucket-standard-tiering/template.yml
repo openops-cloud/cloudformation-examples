@@ -1,15 +1,12 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'S3 Bucket with standard configuration'
-
 Parameters:
   BucketName:
     Type: String
     Description: 'Name of the S3 bucket (leave empty for auto-generated name)'
     Default: ''
-
 Conditions:
   HasBucketName: !Not [!Equals [!Ref BucketName, '']]
-
 Resources:
   S3Bucket:
     Type: 'AWS::S3::Bucket'
@@ -31,14 +28,20 @@ Resources:
           Value: CloudFormation
         - Key: Purpose
           Value: Example
-
+      IntelligentTieringConfigurations: |-
+        Id: IntelligentTieringConfig
+                  Status: Enabled
+                  Tierings:
+                    - AccessTier: ARCHIVE_ACCESS
+                      Days: 90
+                    - AccessTier: DEEP_ARCHIVE_ACCESS
+                      Days: 180
 Outputs:
   BucketName:
     Description: 'Name of the created S3 bucket'
     Value: !Ref S3Bucket
     Export:
       Name: !Sub '${AWS::StackName}-BucketName'
-  
   BucketArn:
     Description: 'ARN of the created S3 bucket'
     Value: !GetAtt S3Bucket.Arn
