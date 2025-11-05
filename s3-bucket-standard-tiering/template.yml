@@ -26,6 +26,14 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+      IntelligentTieringConfigurations:
+        - Id: IntelligentTieringConfig
+          Status: Enabled
+          Tierings:
+            - AccessTier: ARCHIVE_ACCESS
+              Days: 90
+            - AccessTier: DEEP_ARCHIVE_ACCESS
+              Days: 180
       Tags:
         - Key: ManagedBy
           Value: CloudFormation
