@@ -10,6 +10,14 @@ Each example is contained in its own folder with:
 
 ## Examples
 
+### AWS Benchmark Permissions
+
+Location: `aws-benchmark-permissions/`
+
+Creates an IAM role with the necessary permissions for the OpenOps AWS Benchmark feature. This template provisions read-only access to AWS Compute Optimizer, resource metadata (EC2, RDS, ELB, DynamoDB, Lambda, ECS), and the Pricing API.
+
+**Use this template to**: Set up secure cross-account access for OpenOps to run cost optimization benchmarks on your AWS infrastructure.
+
 ### S3 Bucket with Standard Configuration
 
 Location: `s3-bucket-standard-tiering/`
