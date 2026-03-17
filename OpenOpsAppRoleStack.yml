@@ -1,0 +1,630 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  This CloudFormation template creates a role and relevant permissions to be used by the OpenOps app. It can optionally configure
+  cost management services, like Cost Explorer, Compute Optimizer, and Optimization Hub and CUR.
+  The Read Access policy allows the role to know basic information about resources, without access to secrets.
+  Other permission policies can optionally be disabled.
+  Note: If enabling Cost and Usage Report (CUR), the stack should be deployed in us-east-1, as CUR is only available in that region.
+  For other features (benchmark, optimization, etc.), any region can be used.
+
+Parameters:
+  AwsAccountId:
+    Type: String
+    Description: An AWS Account ID that would be allowed to assume the OpenOps role in this account.
+    AllowedPattern: ^\d{12}$
+    ConstraintDescription: Account ID must be a 12-digit number.
+  CostUsageReport:
+    Type: String
+    Description: Create the Cost and Usage Report and export it to an S3 bucket.
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+  BenchmarkAccess:
+    Type: String
+    Description: |
+      Allow OpenOps to access AWS Compute Optimizer recommendations and resource metrics for benchmarking and cost optimization insights.
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+  OptimizationHubConfigurationAccess:
+    Type: String
+    Description: |
+      Allow OpenOps to enroll the account to the Cost Optimization Hub, if it's not already enabled.
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+  TaggingAccess:
+    Type: String
+    Description: |
+      Allow OpenOps to add, update and remove resource tags, such as resource owners.
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+  Ec2InstanceOptimizationAccess:
+    Type: String
+    Description: |
+      Allow OpenOps to optimize EC2 instances, such as stopping or terminating underutilized instances.
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+  VolumeOptimizationAccess:
+    Type: String
+    Description: |
+      Allow OpenOps to optimize EBS volumes, such as deleting unattached volumes or upgrading gp2 to gp3.
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+  RdsOptimizationAccess:
+    Type: String
+    Description: |
+      Allow OpenOps to optimize RDS instances, such as stopping or terminating underutilized instances.
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+  StackOptimizationAccess:
+    Type: String
+    Description: |
+      Allow OpenOps to optimize resources by updating CloudFormation stacks.
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+  CloudFrontOptimizationAccess:
+    Type: String
+    Description: |
+      Allow OpenOps to optimize CloudFront distributions.
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+  CreateIAMUser:
+    Type: String
+    Description: |
+      Create an IAM user with the same permissions as the role, including the ability to assume the role.
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+Conditions:
+  BenchmarkAccess: !Equals [ !Ref BenchmarkAccess, "true" ]
+  OptimizationHubConfigurationAccess: !Equals [ !Ref OptimizationHubConfigurationAccess, "true" ]
+  CreateCur: !Equals [ !Ref CostUsageReport, "true" ]
+  TaggingAccess: !Equals [ !Ref TaggingAccess, "true" ]
+  Ec2InstanceOptimizationAccess: !Equals [ !Ref Ec2InstanceOptimizationAccess, "true" ]
+  VolumeOptimizationAccess: !Equals [ !Ref VolumeOptimizationAccess, "true" ]
+  RdsOptimizationAccess: !Equals [ !Ref RdsOptimizationAccess, "true" ]
+  StackOptimizationAccess: !Equals [ !Ref StackOptimizationAccess, "true" ]
+  CloudFrontOptimizationAccess: !Equals [ !Ref CloudFrontOptimizationAccess, "true" ]
+  CreateIAMUser: !Equals [ !Ref CreateIAMUser, "true" ]
+
+Resources:
+  ReadAccessPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: CoreReadAccess
+            Effect: Allow
+            Action:
+              - ec2:DescribeRegions
+              - sts:GetCallerIdentity
+              - organizations:DescribeAccount
+              - organizations:DescribeOrganization
+              - organizations:ListAccounts
+              - pricing:Describe*
+              - pricing:Get*
+              - pricing:List*
+              - iam:ListTagsForResource
+            Resource: "*"
+          - Sid: CloudWatchReadAccess
+            Effect: Allow
+            Action:
+              - application-autoscaling:DescribeScalingPolicies
+              - autoscaling:Describe*
+              - cloudwatch:BatchGet*
+              - cloudwatch:Describe*
+              - cloudwatch:GenerateQuery
+              - cloudwatch:Get*
+              - cloudwatch:List*
+              - logs:Get*
+              - logs:List*
+              - logs:StartQuery
+              - logs:StopQuery
+              - logs:Describe*
+              - logs:TestMetricFilter
+              - logs:FilterLogEvents
+              - oam:ListSinks
+              - sns:Get*
+              - sns:List*
+              - rum:BatchGet*
+              - rum:Get*
+              - rum:List*
+              - synthetics:Describe*
+              - synthetics:Get*
+              - synthetics:List*
+              - xray:BatchGet*
+              - xray:Get*
+            Resource: "*"
+          - Sid: OptimizationHubReadAccess
+            Effect: Allow
+            Action:
+              - compute-optimizer:Get*
+              - compute-optimizer:Describe*
+              - cost-optimization-hub:Get*
+              - cost-optimization-hub:List*
+              - trustedadvisor:Describe*
+              - trustedadvisor:Get*
+              - trustedadvisor:List*
+            Resource: "*"
+          - Sid: CostExplorerReadAccess
+            Effect: Allow
+            Action:
+              - ce:Describe*
+              - ce:Get*
+              - ce:List*
+            Resource: "*"
+          - Sid: ComputeReadAccess
+            Effect: Allow
+            Action:
+              - ec2:Describe*
+              - ec2:Get*
+              - ec2:List*
+            Resource: "*"
+          - Sid: EcsReadAccess
+            Effect: Allow
+            Action:
+              - ecs:Describe*
+              - ecs:List*
+              - ecr:BatchCheck*
+              - ecr:BatchGet*
+              - ecr:Get*
+              - ecr:Describe*
+              - ecr:List*
+            Resource: "*"
+          - Sid: EksReadAccess
+            Effect: Allow
+            Action:
+              - eks:Describe*
+              - eks:List*
+            Resource: "*"
+          - Sid: LambdaReadAccess
+            Effect: Allow
+            Action:
+              - lambda:List*
+            Resource: "*"
+          - Sid: LoadBalancersReadAccess
+            Effect: Allow
+            Action:
+              - elasticloadbalancing:Describe*
+            Resource: "*"
+          - Sid: RdsClustersReadAccess
+            Effect: Allow
+            Action:
+              - rds:Describe*
+              - rds:List*
+            Resource: "*"
+          - Sid: CloudFrontReadAccess
+            Effect: Allow
+            Action:
+              - cloudfront:List*
+              - cloudfront:Get*
+            Resource: "*"
+          - Sid: S3ReadAccess
+            Effect: Allow
+            Action:
+              - s3:Get*
+              - s3:List*
+            Resource: "*"
+          - Sid: MqReadAccess
+            Effect: Allow
+            Action:
+              - mq:Describe*
+              - mq:List*
+            Resource: "*"
+          - Sid: ReservationsAndSavingPlansReadAccess
+            Effect: Allow
+            Action:
+              - ec2:DescribeReserved*
+              - elasticache:DescribeReserved*
+              - redshift:DescribeReserved*
+              - rds:DescribeReserved*
+              - savingsplans:Describe*
+            Resource: "*"
+          - Sid: CloudTrailReadAccess
+            Effect: Allow
+            Action:
+              - cloudtrail:CancelQuery
+              - cloudtrail:Describe*
+              - cloudtrail:Get*
+              - cloudtrail:LookupEvents
+              - cloudtrail:StartQuery
+              - config:DescribeConfigurationRecorderStatus
+            Resource: "*"
+          - Sid: CloudFormationReadAccess
+            Effect: Allow
+            Action:
+              - cloudformation:Describe*
+              - cloudformation:Get*
+              - cloudformation:List*
+            Resource: "*"
+          - Sid: DynamoDbReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:Describe*
+              - dynamodb:List*
+            Resource: "*"
+          - Sid: SsmReadAccess
+            Effect: Allow
+            Action:
+              - ssm:Describe*
+              - ssm:List*
+            Resource: "*"
+      Roles:
+        - !Ref OpenOpsAppIAMRole
+      Users: !If
+        - CreateIAMUser
+        - - !Ref OpenOpsAppIAMUser
+        - !Ref AWS::NoValue
+
+  BenchmarkAccessPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Condition: BenchmarkAccess
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ComputeOptimizerBenchmark
+            Effect: Allow
+            Action:
+              - compute-optimizer:GetEC2InstanceRecommendations
+              - compute-optimizer:GetEBSVolumeRecommendations
+              - compute-optimizer:GetRecommendationSummaries
+              - compute-optimizer:GetEnrollmentStatus
+              - compute-optimizer:GetAutoScalingGroupRecommendations
+              - compute-optimizer:GetLambdaFunctionRecommendations
+              - compute-optimizer:GetECSServiceRecommendations
+              - compute-optimizer:GetIdleRecommendations
+              - compute-optimizer:GetLicenseRecommendations
+              - compute-optimizer:GetRDSDatabaseRecommendations
+            Resource: "*"
+          - Sid: BenchmarkResourceMetrics
+            Effect: Allow
+            Action:
+              - cloudwatch:GetMetricStatistics
+              - ce:GetCostAndUsage
+              - tag:GetResources
+              - tag:GetTagKeys
+              - tag:GetTagValues
+            Resource: "*"
+      Roles:
+        - !Ref OpenOpsAppIAMRole
+      Users: !If
+        - CreateIAMUser
+        - - !Ref OpenOpsAppIAMUser
+        - !Ref AWS::NoValue
+
+  ResourceOptimizationAccessPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PlaceholderStatement
+            Effect: Allow
+            Action:
+              - sts:GetCallerIdentity
+            Resource: "*"
+          - !If
+            - TaggingAccess
+            - Sid: TaggingAccess
+              Effect: Allow
+              Action:
+                - ec2:CreateTags
+                - ec2:DeleteTags
+                - tag:*
+                - rds:AddTagsToResource
+                - rds:RemoveTagsFromResource
+                - resource-groups:Tag*
+                - resource-groups:Untag*
+              Resource: "*"
+            - !Ref AWS::NoValue
+          - !If
+            - Ec2InstanceOptimizationAccess
+            - Sid: Ec2InstanceOptimizationAccess
+              Effect: Allow
+              Action:
+                - ec2:ModifyInstance*
+                - ec2:ModifyLaunchTemplate
+                - ec2:RebootInstances
+                - ec2:StartInstances
+                - ec2:StopInstances
+                - ec2:TerminateInstances
+              Resource: "*"
+            - !Ref AWS::NoValue
+          - !If
+            - VolumeOptimizationAccess
+            - Sid: VolumeOptimizationAccess
+              Effect: Allow
+              Action:
+                - ec2:AttachVolume
+                - ec2:CreateSnapshot
+                - ec2:CreateSnapshots
+                - ec2:DeleteSnapshot
+                - ec2:DeleteVolume
+                - ec2:DetachVolume
+                - ec2:ModifyVolume
+                - ec2:ModifyVolumeAttribute
+              Resource: "*"
+            - !Ref AWS::NoValue
+          - !If
+            - RdsOptimizationAccess
+            - Sid: RdsOptimizationAccess
+              Effect: Allow
+              Action:
+                - rds:CreateDBSnapshot
+                - rds:Delete*
+                - rds:Modify*
+                - rds:Reboot*
+                - rds:Start*
+                - rds:Stop*
+                - rds:AddTagsToResource
+              Resource: "*"
+            - !Ref AWS::NoValue
+          - !If
+            - StackOptimizationAccess
+            - Sid: StackOptimizationAccess
+              Effect: Allow
+              Action:
+                - cloudformation:Cancel*
+                - cloudformation:Delete*
+                - cloudformation:Update*
+              Resource: "*"
+            - !Ref AWS::NoValue
+          - !If
+            - CloudFrontOptimizationAccess
+            - Sid: CloudFrontOptimizationAccess
+              Effect: Allow
+              Action:
+                - cloudfront:UpdateDistribution
+              Resource: "*"
+            - !Ref AWS::NoValue
+      Roles:
+        - !Ref OpenOpsAppIAMRole
+      Users: !If
+        - CreateIAMUser
+        - - !Ref OpenOpsAppIAMUser
+        - !Ref AWS::NoValue
+
+  OptimizationHubConfigurationPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Condition: OptimizationHubConfigurationAccess
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: CreateServiceRoleForComputeOptimizer
+            Effect: Allow
+            Action:
+              - iam:CreateServiceLinkedRole
+            Resource: arn:aws:iam::*:role/aws-service-role/compute-optimizer.amazonaws.com/AWSServiceRoleForComputeOptimizer
+          - Sid: EnrollToCostOptimizationHub
+            Effect: Allow
+            Action:
+              - compute-optimizer:UpdateEnrollmentStatus
+              - cost-optimization-hub:UpdateEnrollmentStatus
+              - cost-optimization-hub:UpdatePreferences
+              - trustedadvisor:RefreshCheck
+            Resource: "*"
+      Roles:
+        - !Ref OpenOpsAppIAMRole
+      Users: !If
+        - CreateIAMUser
+        - - !Ref OpenOpsAppIAMUser
+        - !Ref AWS::NoValue
+
+
+  CurAccessPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Condition: CreateCur
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: CurReadAccess
+            Effect: Allow
+            Action:
+              - cur:Describe*
+              - cur:Get*
+              - cur:ValidateReportDestination
+            Resource: "*"
+          - Sid: CurBucketReadAccess
+            Effect: Allow
+            Action:
+              - s3:Get*
+              - s3:ListBucket
+            Resource:
+              - !GetAtt CurBucket.Arn
+              - !Sub '${CurBucket.Arn}/*'
+      Roles:
+        - !Ref OpenOpsAppIAMRole
+      Users: !If
+        - CreateIAMUser
+        - - !Ref OpenOpsAppIAMUser
+        - !Ref AWS::NoValue
+
+  CurBucket:
+    Type: 'AWS::S3::Bucket'
+    Condition: CreateCur
+    Properties:
+      BucketName: !Sub 'openops-cur-${AWS::AccountId}'
+      LifecycleConfiguration:
+        Rules:
+          - Id: TransitionToInfrequentAccess
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 30
+                StorageClass: STANDARD_IA
+          - Id: ExpireOldReports
+            Status: Enabled
+            ExpirationInDays: 180
+
+  CurBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Condition: CreateCur
+    Properties:
+      Bucket: !Ref CurBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: 'AllowBillingReportsAccess'
+            Effect: 'Allow'
+            Principal:
+              Service:
+                - billingreports.amazonaws.com
+            Action:
+              - s3:GetBucketAcl
+              - s3:GetBucketPolicy
+              - s3:PutObject
+            Resource:
+              - !GetAtt CurBucket.Arn
+              - !Sub '${CurBucket.Arn}/*'
+
+  CurReport:
+    Type: AWS::CUR::ReportDefinition
+    Condition: CreateCur
+    DependsOn:
+      - CurBucket
+      - CurBucketPolicy
+    Properties:
+      ReportName: OpenOpsHourlyAthena
+      TimeUnit: HOURLY
+      Format: Parquet
+      Compression: Parquet
+      AdditionalSchemaElements:
+        - RESOURCES
+      AdditionalArtifacts:
+        - ATHENA
+      S3Bucket: !Ref CurBucket
+      S3Prefix: openops-reports
+      S3Region: us-east-1
+      RefreshClosedReports: true
+      ReportVersioning: OVERWRITE_REPORT
+
+  OpenOpsAppIAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: OpenOpsApp
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !Ref AwsAccountId
+            Action: [ 'sts:AssumeRole' ]
+          - !If
+            - CreateIAMUser
+            - Effect: Allow
+              Principal:
+                AWS: !GetAtt OpenOpsAppIAMUser.Arn
+              Action: [ 'sts:AssumeRole' ]
+            - !Ref AWS::NoValue
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: [ 'sts:AssumeRole' ]
+
+  OpenOpsAppIAMUser:
+    Type: 'AWS::IAM::User'
+    Condition: CreateIAMUser
+    Properties:
+      UserName: OpenOpsApp
+      Path: /
+
+  OpenOpsAppUserAccessKey:
+    Type: 'AWS::IAM::AccessKey'
+    Condition: CreateIAMUser
+    Properties:
+      UserName: !Ref OpenOpsAppIAMUser
+
+  OpenOpsAppUserSecret:
+    Type: 'AWS::SecretsManager::Secret'
+    Condition: CreateIAMUser
+    Properties:
+      Name: !Sub 'openops-app-user-credentials-${AWS::AccountId}'
+      Description: 'API credentials for the OpenOps App IAM User'
+      SecretString: !Sub '{"AccessKeyId": "${OpenOpsAppUserAccessKey}", "SecretAccessKey": "${OpenOpsAppUserAccessKey.SecretAccessKey}"}'
+
+  SecretsAccessPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Condition: CreateIAMUser
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'secretsmanager:GetSecretValue'
+              - 'secretsmanager:DescribeSecret'
+            Resource: !Ref OpenOpsAppUserSecret
+      Users:
+        - !Ref OpenOpsAppIAMUser
+
+  AssumeRolePolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Condition: CreateIAMUser
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: 'sts:AssumeRole'
+            Resource: !GetAtt OpenOpsAppIAMRole.Arn
+      Users:
+        - !Ref OpenOpsAppIAMUser
+
+  OpenOpsAppInstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      InstanceProfileName: OpenOpsApp
+      Path: /
+      Roles:
+        - !Ref OpenOpsAppIAMRole
+
+Outputs:
+  CurBucketName:
+    Condition: CreateCur
+    Description: 'The name of the S3 bucket used for CUR.'
+    Value: !Ref CurBucket
+
+  IAMUserArn:
+    Condition: CreateIAMUser
+    Description: 'The ARN of the IAM user created for OpenOps.'
+    Value: !GetAtt OpenOpsAppIAMUser.Arn
+
+  IAMRoleArn:
+    Description: 'The ARN of the IAM role created for OpenOps.'
+    Value: !GetAtt OpenOpsAppIAMRole.Arn
+
+  IAMUserAccessKeyId:
+    Condition: CreateIAMUser
+    Description: 'The Access Key ID of the IAM user created for OpenOps.'
+    Value: !Ref OpenOpsAppUserAccessKey
+
+  IAMUserSecretArn:
+    Condition: CreateIAMUser
+    Description: 'The ARN of the secret containing the IAM user credentials.'
+    Value: !Ref OpenOpsAppUserSecret
+
+  InstanceProfileArn:
+    Description: 'The ARN of the instance profile that can be attached to EC2 instances.'
+    Value: !GetAtt OpenOpsAppInstanceProfile.Arn
