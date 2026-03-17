@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  IAM role for OpenOps AWS Benchmark feature. This role provides read-only access
+  to AWS resources and services required for cost optimization benchmarking.
+
+Parameters:
+  ExternalId:
+    Type: String
+    Description: External ID for cross-account role assumption (recommended for security)
+    Default: ''
+    NoEcho: true
+
+  TrustedAccountId:
+    Type: String
+    Description: AWS Account ID that will assume this role (OpenOps account or your own)
+    AllowedPattern: '^[0-9]{12}$'
+    ConstraintDescription: Must be a valid 12-digit AWS account ID
+
+Conditions:
+  UseExternalId: !Not [!Equals [!Ref ExternalId, '']]
+
+Resources:
+  OpenOpsBenchmarkRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: OpenOpsBenchmarkRole
+      Description: Read-only role for OpenOps AWS Benchmark feature
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${TrustedAccountId}:root'
+            Action: sts:AssumeRole
+            Condition: !If
+              - UseExternalId
+              - StringEquals:
+                  sts:ExternalId: !Ref ExternalId
+              - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - !Ref ComputeOptimizerPolicy
+        - !Ref ResourceReadOnlyPolicy
+        - !Ref PricingPolicy
+      Tags:
+        - Key: Purpose
+          Value: OpenOps-Benchmark
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  ComputeOptimizerPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: OpenOps-ComputeOptimizer-ReadOnly
+      Description: Allow read access to AWS Compute Optimizer recommendations
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ComputeOptimizerRecommendations
+            Effect: Allow
+            Action:
+              - compute-optimizer:GetEC2InstanceRecommendations
+              - compute-optimizer:GetEBSVolumeRecommendations
+              - compute-optimizer:GetRecommendationSummaries
+              - compute-optimizer:GetEnrollmentStatus
+              - compute-optimizer:GetAutoScalingGroupRecommendations
+              - compute-optimizer:GetLambdaFunctionRecommendations
+              - compute-optimizer:GetECSServiceRecommendations
+              - compute-optimizer:GetIdleRecommendations
+              - compute-optimizer:GetLicenseRecommendations
+              - compute-optimizer:GetRDSDatabaseRecommendations
+            Resource: '*'
+
+  ResourceReadOnlyPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: OpenOps-Resources-ReadOnly
+      Description: Read-only access to AWS resources for benchmarking
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: EC2ReadOnly
+            Effect: Allow
+            Action:
+              - ec2:DescribeInstances
+              - ec2:DescribeVolumes
+              - ec2:DescribeSnapshots
+              - ec2:DescribeInstanceTypes
+              - ec2:DescribeAddresses
+              - ec2:DescribeNatGateways
+              - ec2:DescribeVpcEndpoints
+              - ec2:DescribeRegions
+            Resource: '*'
+
+          - Sid: RDSReadOnly
+            Effect: Allow
+            Action:
+              - rds:DescribeDBInstances
+              - rds:DescribeDBSnapshots
+              - rds:DescribeDBEngineVersions
+            Resource: '*'
+
+          - Sid: ELBReadOnly
+            Effect: Allow
+            Action:
+              - elasticloadbalancing:DescribeLoadBalancers
+            Resource: '*'
+
+          - Sid: DynamoDBReadOnly
+            Effect: Allow
+            Action:
+              - dynamodb:ListTables
+              - dynamodb:DescribeTable
+            Resource: '*'
+
+          - Sid: CloudWatchReadOnly
+            Effect: Allow
+            Action:
+              - cloudwatch:GetMetricStatistics
+            Resource: '*'
+
+          - Sid: CostExplorerReadOnly
+            Effect: Allow
+            Action:
+              - ce:GetCostAndUsage
+            Resource: '*'
+
+          - Sid: CloudTrailReadOnly
+            Effect: Allow
+            Action:
+              - cloudtrail:LookupEvents
+            Resource: '*'
+
+          - Sid: OrganizationsReadOnly
+            Effect: Allow
+            Action:
+              - organizations:DescribeAccount
+              - organizations:ListAccounts
+            Resource: '*'
+
+          - Sid: STSGetCallerIdentity
+            Effect: Allow
+            Action:
+              - sts:GetCallerIdentity
+            Resource: '*'
+
+          - Sid: TaggingReadOnly
+            Effect: Allow
+            Action:
+              - tag:GetResources
+              - tag:GetTagKeys
+              - tag:GetTagValues
+            Resource: '*'
+
+  PricingPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: OpenOps-Pricing-ReadOnly
+      Description: Read access to AWS Pricing API
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PricingAPIAccess
+            Effect: Allow
+            Action:
+              - pricing:DescribeServices
+              - pricing:GetAttributeValues
+              - pricing:GetProducts
+            Resource: '*'
+
+Outputs:
+  RoleArn:
+    Description: ARN of the OpenOps Benchmark IAM Role
+    Value: !GetAtt OpenOpsBenchmarkRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-RoleArn'
+
+  RoleName:
+    Description: Name of the OpenOps Benchmark IAM Role
+    Value: !Ref OpenOpsBenchmarkRole
+    Export:
+      Name: !Sub '${AWS::StackName}-RoleName'
+
+  AccountId:
+    Description: AWS Account ID where the role was created
+    Value: !Ref AWS::AccountId
+
+  SetupInstructions:
+    Description: Next steps for using this role with OpenOps
+    Value: !Sub |
+      1. Copy the Role ARN: ${OpenOpsBenchmarkRole.Arn}
+      2. In OpenOps, create or update your AWS connection
+      3. Configure the connection to assume this role
+      4. Provide the External ID (if configured): ${ExternalId}
