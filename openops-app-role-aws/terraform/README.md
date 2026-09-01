@@ -10,7 +10,7 @@ Terraform equivalent of the [OpenOpsApp CloudFormation role stack](https://openo
   - Write permissions for optimization actions — tagging, EC2 instances, EBS volumes, RDS, CloudFormation stacks, CloudFront
   - Cost Optimization Hub / Compute Optimizer enrollment permissions
   - A Cost and Usage Report (CUR) exported to a new S3 bucket (`openops-cur-<account-id>`)
-- Optional (disabled by default): an IAM user with the same permissions as the role, with its access key stored in AWS Secrets Manager
+- Optional (disabled by default): an IAM user with the same permissions as the role, with its access key stored in AWS Secrets Manager (note: enabling this will store the access key secret in Terraform state; use an encrypted, access-controlled backend)
 
 ## Prerequisites
 
