@@ -1,14 +1,22 @@
 # CloudFormation Examples
 
-A collection of AWS CloudFormation templates for practice and testing purposes. This repository contains various infrastructure-as-code examples that can be used by the OpenOps platform for validation, testing, and remediation scenarios.
+A collection of AWS CloudFormation and Terraform templates for practice and testing purposes. This repository contains various infrastructure-as-code examples that can be used by the OpenOps platform for validation, testing, and remediation scenarios.
 
 ## Repository Structure
 
 Each example is contained in its own folder with:
-- CloudFormation template (YAML format)
+- Infrastructure-as-code template (CloudFormation YAML or Terraform)
 - README with description and usage instructions
 
 ## Examples
+
+### OpenOps App IAM Role (Terraform)
+
+Location: `openops-app-role-aws/terraform/`
+
+Terraform equivalent of the OpenOpsApp CloudFormation role stack. Creates the `OpenOpsApp` IAM role and permissions used by the OpenOps app to connect to your AWS account, with optional Cost and Usage Report setup, optimization write permissions, and an optional IAM user.
+
+**Use this template to**: Create the AWS IAM role for an OpenOps connection using Terraform instead of CloudFormation.
 
 ### AWS Benchmark Permissions
 
